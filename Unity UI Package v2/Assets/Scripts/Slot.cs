@@ -6,28 +6,39 @@ using UnityEngine.EventSystems;
 
 public class Slot : MonoBehaviour
 {
-    bool occupied = false;
-    public Draggable item;
+    public Draggable item = null;
 
     public UnityEvent OnHover;
     public UnityEvent OnSlot;
 
-
-    public void SetOccupied(bool answer)
-    {
-        occupied = answer;
-    }
-    public bool IsOccupied()
-    {
-        return occupied;
-    }
 
     private void Update()
     {
         if(EventSystem.current.IsPointerOverGameObject())
         {
             OnHover.Invoke();
+            DragDropManager.instance.HoveringSlot(true, GetComponent<Slot>());
         }
+    }
+
+    public bool HasItem()
+    {
+        return item != null;
+    }
+
+    public bool AddItem(Draggable _item)
+    {
+        if (!HasItem())
+        {
+            item = _item;
+            return true;
+        }
+        return false;
+    }
+
+    public void RemoveItem()
+    {
+        item = null;
     }
 
     //bool ItemOver()

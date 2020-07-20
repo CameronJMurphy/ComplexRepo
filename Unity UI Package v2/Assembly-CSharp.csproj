@@ -64,6 +64,7 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\Container.cs" />
     <Compile Include="Assets\Scripts\DragDropEvents.cs" />
+    <Compile Include="Assets\Scripts\DragDropManager.cs" />
     <Compile Include="Assets\Scripts\Draggable.cs" />
     <Compile Include="Assets\Scripts\GraphicRaycaster.cs" />
     <Compile Include="Assets\Scripts\Slot.cs" />

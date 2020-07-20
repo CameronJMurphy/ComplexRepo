@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public enum TweenType
 {
@@ -9,11 +10,14 @@ public enum TweenType
     Looping
 }
 
-public enum Curve
+public enum Ease
 {
-    linear,
-    Quadratic,
-    Cubic
+    none,
+    easeInExpo,
+    easeOutSine,
+    easeInQuint,
+    easeOutBounce,
+    easeInBack
 }
 
 public enum TransformSection
@@ -22,28 +26,38 @@ public enum TransformSection
     scale
 }
 
+public enum SetVectorTo
+{
+    None,
+    LocalPosition,
+    LocalScale
+}
+
 public class TweenTransform : MonoBehaviour
 {
     public TransformSection affectedSection;
     public TweenType tweenType;
-    public Curve curve;
+    public Ease ease;
     public float duration;
     public Vector3 startVector;
     public Vector3 endVector;
-    public bool startVectorEqualsPosition = false;
+    public SetVectorTo SetStartVector;
     public bool loop = false;
-
-    int points = 50;
-    Vector3[] speeds = new Vector3[50];
-    int i = 0;
+    public UnityEvent OnTweenEnd;
+    float halfDuration;
 
     // Start is called before the first frame update
     void Start()
     {
-        if(startVectorEqualsPosition)
+        if (SetStartVector == SetVectorTo.LocalPosition)
         {
             startVector = transform.localPosition;
         }
+        else if (SetStartVector == SetVectorTo.LocalScale)
+        {
+            startVector = transform.localScale;
+        }
+        halfDuration = duration / 2.0f;
     }
 
     // Update is called once per frame
@@ -53,31 +67,6 @@ public class TweenTransform : MonoBehaviour
     }
 
     public void Invoke()
-    {
-        switch (curve) //which curve type is it
-        {
-            case (Curve.Cubic):
-                CurveCubic();
-                break;
-            case (Curve.linear):
-                CurveLinear();
-                break;
-            case (Curve.Quadratic):
-                CurveQuadratic();
-                break;
-        }
-        switch (affectedSection)
-        {
-            case TransformSection.position:
-                TweenPosition();
-                break;
-            case TransformSection.scale:
-                TweenScale();
-                break;
-        }
-    }
-
-    void TweenPosition()
     {
 
         switch (tweenType) //which tween type is it
@@ -97,19 +86,6 @@ public class TweenTransform : MonoBehaviour
                 break;
         }
     }
-
-    void TweenScale()
-    {
-        switch (curve) //which tween type is it
-        {
-            case (Curve.Cubic):
-                break;
-            case (Curve.linear):
-                break;
-            case (Curve.Quadratic):
-                break;
-        }
-    }
     ////////////TweensTypes/////////////////
     IEnumerator LoopingTween()
     {
@@ -118,19 +94,32 @@ public class TweenTransform : MonoBehaviour
         //repeat
         while (loop == true)
         {
-            if (affectedSection == TransformSection.position)
+            if (affectedSection == TransformSection.position)//affecting position vector
             {
                 float elapsedTime = 0;
                 while (elapsedTime < duration)
                 {
-                    transform.localPosition = Vector3.Lerp(startVector, endVector, elapsedTime / (duration / 2));
-                    if (transform.localPosition == endVector)
-                    {
-                        transform.localPosition = startVector;
-                    }
+                    float t = elapsedTime / duration;
+                    t = EaseT(t);
+                    transform.localPosition = Vector3.LerpUnclamped(startVector, endVector, t);
                     elapsedTime += Time.deltaTime;
                     yield return new WaitForEndOfFrame();
                 }
+                transform.localPosition = endVector;
+                yield return null;
+            }
+            if (affectedSection == TransformSection.scale) // affecting scale
+            {
+                float elapsedTime = 0;
+                while (elapsedTime < duration)
+                {
+                    float t = elapsedTime / duration;
+                    t = EaseT(t);
+                    transform.localScale = Vector3.LerpUnclamped(startVector, endVector, t);
+                    elapsedTime += Time.deltaTime;
+                    yield return new WaitForEndOfFrame();
+                }
+                transform.localScale = endVector;
                 yield return null;
             }
         }
@@ -139,145 +128,295 @@ public class TweenTransform : MonoBehaviour
         {
             for (int i = 0; i < 2; ++i)
             {
-                if (affectedSection == TransformSection.position)
+                if (affectedSection == TransformSection.position)//affecting position vector
                 {
                     float elapsedTime = 0;
                     while (elapsedTime < duration)
                     {
-                        transform.localPosition = Vector3.Lerp(startVector, endVector, elapsedTime / (duration / 2));
-                        if (transform.localPosition == endVector)
-                        {
-                            transform.localPosition = startVector;
-                        }
+                        float t = elapsedTime / duration;
+                        t = EaseT(t);
+                        transform.localPosition = Vector3.LerpUnclamped(startVector, endVector, t);
                         elapsedTime += Time.deltaTime;
                         yield return new WaitForEndOfFrame();
                     }
+                    transform.localPosition = endVector;
+                    yield return null;
+                }
+                if (affectedSection == TransformSection.scale)
+                {
+                    float elapsedTime = 0;
+                    while (elapsedTime < duration)
+                    {
+                        float t = elapsedTime / duration;
+                        t = EaseT(t);
+                        transform.localScale = Vector3.LerpUnclamped(startVector, endVector, t);
+                        elapsedTime += Time.deltaTime;
+                        yield return new WaitForEndOfFrame();
+                    }
+                    transform.localScale = endVector;
                     yield return null;
                 }
             }
 
         }
+        OnTweenEnd.Invoke();
     }
 
     IEnumerator PingPongTween()
     {
         //reach the end of the tween
         //Go from back to front
-        //repeat
+        //Then go back to end vector
         while (loop == true)
         {
-            if (affectedSection == TransformSection.position)
+            for (int i = 0; i < 2; ++i)
             {
-                float elapsedTime = 0;
-                float timer2 = 0;
-                while (elapsedTime < duration)
+                if (affectedSection == TransformSection.position) //affecting position vector
                 {
-                    if (transform.localPosition != endVector)
+                    if (i == 0)//first pass - reach the end
                     {
-                        transform.localPosition = Vector3.Lerp(startVector, endVector, elapsedTime / (duration / 2));
+                        float elapsedTime = 0;
+                        while (elapsedTime < duration)
+                        {
+                            float t = elapsedTime / duration;
+                            t = EaseT(t);
+                            transform.localPosition = Vector3.LerpUnclamped(startVector, endVector, t);
+                            elapsedTime += Time.deltaTime;
+                            yield return new WaitForEndOfFrame();
+                        }
+                        transform.localPosition = endVector;
+                        yield return null;
                     }
-                    if (transform.localPosition == endVector)
+                    else //second pass go back to start
                     {
-                        transform.localPosition = Vector3.Lerp(endVector, startVector, timer2 / (duration / 2));
-                        timer2 += Time.deltaTime;
+                        float elapsedTime = 0;
+                        while (elapsedTime < duration)
+                        {
+                            float t = elapsedTime / duration;
+                            t = EaseT(t);
+                            transform.localPosition = Vector3.LerpUnclamped(endVector, startVector, t);
+                            elapsedTime += Time.deltaTime;
+                            yield return new WaitForEndOfFrame();
+                        }
+                        transform.localPosition = startVector;
+                        yield return null;
                     }
-                    elapsedTime += Time.deltaTime;
-                    yield return new WaitForEndOfFrame();
+
                 }
-                //transform.localPosition = endVector;
-                yield return null;
+                if (affectedSection == TransformSection.scale) //affecting scale vector
+                {
+                    if (i == 0)//first pass and third pass- reach the end
+                    {
+                        float elapsedTime = 0;
+                        while (elapsedTime < duration)
+                        {
+                            float t = elapsedTime / duration;
+                            t = EaseT(t);
+                            transform.localScale = Vector3.LerpUnclamped(startVector, endVector, t);
+                            elapsedTime += Time.deltaTime;
+                            yield return new WaitForEndOfFrame();
+                        }
+                        transform.localScale = endVector;
+                        yield return null;
+                    }
+                    else //second pass go back to start
+                    {
+                        float elapsedTime = 0;
+                        while (elapsedTime < duration)
+                        {
+                            float t = elapsedTime / duration;
+                            t = EaseT(t);
+                            transform.localScale = Vector3.LerpUnclamped(endVector, startVector, t);
+                            elapsedTime += Time.deltaTime;
+                            yield return new WaitForEndOfFrame();
+                        }
+                        transform.localScale = startVector;
+                        yield return null;
+                    }
+                }
             }
         }
-
+        //Loop once
         if (loop != true)
         {
-            if (affectedSection == TransformSection.position)
+            for (int i = 0; i < 3; ++i)
             {
-                float elapsedTime = 0;
-                float timer2 = 0;
-                while (elapsedTime < duration)
+                if (affectedSection == TransformSection.position) //affecting position vector
                 {
-                    if (transform.localPosition != endVector)
+                    if (i == 0 || i == 2)//first pass and third pass- reach the end
                     {
-                        transform.localPosition = Vector3.Lerp(startVector, endVector, elapsedTime / (duration / 2));
+                        float elapsedTime = 0;
+                        while (elapsedTime < duration)
+                        {
+                            float t = elapsedTime / duration;
+                            t = EaseT(t);
+                            transform.localPosition = Vector3.LerpUnclamped(startVector, endVector, t);
+                            elapsedTime += Time.deltaTime;
+                            yield return new WaitForEndOfFrame();
+                        }
+                        transform.localPosition = endVector;
+                        yield return null;
                     }
-                    if (transform.localPosition == endVector)
+                    else //second pass go back to start
                     {
-                        transform.localPosition = Vector3.Lerp(endVector, startVector, timer2 / (duration / 2));
-                        timer2 += Time.deltaTime;
+                        float elapsedTime = 0;
+                        while (elapsedTime < duration)
+                        {
+                            float t = elapsedTime / duration;
+                            t = EaseT(t);
+                            transform.localPosition = Vector3.LerpUnclamped(endVector, startVector, t);
+                            elapsedTime += Time.deltaTime;
+                            yield return new WaitForEndOfFrame();
+                        }
+                        transform.localPosition = startVector;
+                        yield return null;
                     }
-                    elapsedTime += Time.deltaTime;
-                    yield return new WaitForEndOfFrame();
-                }
-                //transform.localPosition = endVector;
-                yield return null;
-            }
-        }
-        
-    }
 
+                }
+                if (affectedSection == TransformSection.scale) //affecting scale vector
+                {
+                    if (i == 0 || i == 2)//first pass and third pass- reach the end
+                    {
+                        float elapsedTime = 0;
+                        while (elapsedTime < duration)
+                        {
+                            float t = elapsedTime / duration;
+                            t = EaseT(t);
+                            transform.localScale = Vector3.LerpUnclamped(startVector, endVector, t);
+                            elapsedTime += Time.deltaTime;
+                            yield return new WaitForEndOfFrame();
+                        }
+                        transform.localScale = endVector;
+                        yield return null;
+                    }
+                    else //second pass go back to start
+                    {
+                        float elapsedTime = 0;
+                        while (elapsedTime < duration)
+                        {
+                            float t = elapsedTime / duration;
+                            t = EaseT(t);
+                            transform.localScale = Vector3.LerpUnclamped(endVector, startVector, t);
+                            elapsedTime += Time.deltaTime;
+                            yield return new WaitForEndOfFrame();
+                        }
+                        transform.localScale = startVector;
+                        yield return null;
+                    }
+                }
+            }
+            OnTweenEnd.Invoke();
+
+        }
+    }
     IEnumerator SingleTween()
     {
         //Reach end of tween
         //stop
-        if (affectedSection == TransformSection.position)
+        if (affectedSection == TransformSection.position)//affecting position vector
         {
             float elapsedTime = 0;
             while (elapsedTime < duration)
             {
-                transform.localPosition = Vector3.Lerp(startVector, endVector, elapsedTime / duration);
+                float t = elapsedTime / duration;
+                t = EaseT(t);
+                transform.localPosition = Vector3.LerpUnclamped(startVector, endVector, t);
                 elapsedTime += Time.deltaTime;
                 yield return new WaitForEndOfFrame();
             }
             transform.localPosition = endVector;
             yield return null;
         }
-      
+        if (affectedSection == TransformSection.scale) //affecting scale vector
+        {
+            float elapsedTime = 0;
+            while (elapsedTime < duration)
+            {
+                float t = elapsedTime / duration;
+                t = EaseT(t);
+                transform.localScale = Vector3.LerpUnclamped(startVector, endVector, t);
+                elapsedTime += Time.deltaTime;
+                yield return new WaitForEndOfFrame();
+            }
+            transform.localScale = endVector;
+            yield return null;
+        }
 
+        OnTweenEnd.Invoke();
     }
 
-    ////////////Curves/////////////////
-    void CurveLinear()
+    ////////////Eases/////////////////
+
+    float EaseT(float t)
     {
-        for (int i = 1; i < points + 1; ++i)
+        switch (ease)
         {
-            float t = i / points;
-            speeds[i - 1] = startVector + t * (endVector - startVector);
+            case (Ease.none):
+                return t;
+                break;
+            case (Ease.easeInExpo):
+                return easeInExpo(t);
+                break;
+            case (Ease.easeOutSine):
+                return easeOutSine(t);
+                break;
+            case (Ease.easeInQuint):
+                return easeInQuint(t);
+                break;
+            case (Ease.easeOutBounce):
+                return easeOutBounce(t);
+                break;
+            case (Ease.easeInBack):
+                return easeInBack(t);
+                break;
+
+        }
+        return 0;
+    }
+
+    float easeInExpo(float t)
+    {
+        return Mathf.Pow(2, (10 * t - 10));
+    }
+
+    float easeOutSine(float t)
+    {
+        return Mathf.Sin((t * Mathf.PI) / 2);
+    }
+
+    float easeInQuint(float t)
+    {
+        return t * t * t * t * t;
+    }
+
+    float easeOutBounce(float t)
+    {
+        const float n1 = 7.5625f;
+        const float d1 = 2.75f;
+
+        if (t < 1 / d1)
+        {
+            return n1 * t * t;
+        }
+        else if (t < 2 / d1)
+        {
+            return n1 * (t -= 1.5f / d1) * t + 0.75f;
+        }
+        else if (t < 2.5 / d1)
+        {
+            return n1 * (t -= 2.25f / d1) * t + 0.9375f;
+        }
+        else
+        {
+            return n1 * (t -= 2.625f / d1) * t + 0.984375f;
         }
     }
 
-    void CurveCubic()
+    float easeInBack(float t)
     {
-        for (int i = 1; i < points + 1; ++i)
-        {
-            float t = i / points;
-            speeds[i - 1] = CalculatePointOnCubicCurve(t, startVector, endVector / 3, (endVector / 3) * 2, endVector);
-        }
+        const float c1 = 1.70158f;
+        const float c3 = c1 + 1;
+        return c3 * t * t * t - c1 * t * t;
     }
-    Vector3 CalculatePointOnCubicCurve(float t, Vector3 start, Vector3 intermediary, Vector3 intermediary2, Vector3 end)
-    {
-        float u = 1 - t;
-        float tt = t * t;
-        float uu = u * u;
-        float uuu = uu * u;
-        float ttt = tt * t;
-        return uuu * start + 3 * uu * t * intermediary + 3 * u * tt * intermediary2 + ttt * end;
-    }
-
-    void CurveQuadratic()
-    {
-        for (int i = 1; i < points + 1; ++i)
-        {
-            float t = i / points;
-            speeds[i - 1] = CalculatePointOnQudracticCurve(t, startVector, endVector, endVector / 2);
-        }
-    }
-    Vector3 CalculatePointOnQudracticCurve(float t, Vector3 start, Vector3 intermediary, Vector3 end)
-    {
-        float o = 1 - t;
-        float tt = t * t;
-        float oo = o * o;
-        return (00 * start) + (2 * o * t * intermediary) + (tt * end);
-    }
-
 }
+

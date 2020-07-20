@@ -552,12 +552,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   affectedSection: 0
   tweenType: 2
-  curve: 0
+  ease: 0
   duration: 1
   startVector: {x: 0, y: 0, z: 0}
-  endVector: {x: 100, y: 100, z: 0}
-  startVectorEqualsPosition: 1
+  endVector: {x: 10, y: 10, z: 0}
+  SetStartVector: 1
   loop: 1
+  OnTweenEnd:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &1639792683
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -573,7 +576,7 @@ MonoBehaviour:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
-  m_Maskable: 1
+  m_Maskable: 0
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -611,7 +614,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -468.5, y: 0}
+  m_AnchoredPosition: {x: -340, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1717178200

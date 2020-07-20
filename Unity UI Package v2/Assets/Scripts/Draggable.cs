@@ -30,6 +30,7 @@ public class Draggable : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
     {
         gameObject.transform.position = Input.mousePosition;
         dragging = true;
+        DragDropManager.instance.BeingDragged(gameObject.GetComponent<Draggable>());
     }
 
     void IDragHandler.OnDrag(PointerEventData eventData)
