@@ -14,11 +14,11 @@ using UnityEngine;
 public class DragDropManager : MonoBehaviour
 {
     public static DragDropManager instance;
-    Draggable beingDragged;
+    Draggable beingDragged = null;
     bool hoveringSlot = false;
-    Slot slotBeingHovered;
+    Slot slotBeingHovered = null;
     // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
         instance = this;
     }
@@ -26,7 +26,10 @@ public class DragDropManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if(Input.GetMouseButtonUp(0))
+        {
+            Release();
+        }
     }
 
 
@@ -41,7 +44,7 @@ public class DragDropManager : MonoBehaviour
         slotBeingHovered = slot;
     }
 
-    private void OnMouseUp()
+    private void Release()
     {
         if (hoveringSlot && beingDragged != null)
         {
@@ -51,7 +54,7 @@ public class DragDropManager : MonoBehaviour
                 beingDragged.GetComponentInParent<Slot>().RemoveItem();
                 beingDragged.transform.SetParent(slotBeingHovered.transform);
             }
-            beingDragged.transform.localPosition = new Vector3(0, 0, 0);
+            Reset();
         }
         else {
             Reset();
@@ -60,8 +63,12 @@ public class DragDropManager : MonoBehaviour
 
     private void Reset()
     {
-        beingDragged = null;
+        if (beingDragged)
+        {
+            beingDragged.transform.localPosition = new Vector3(0, 0, 0);
+            beingDragged = null;
+        }
         hoveringSlot = false;
-        slotBeingHovered = null;
+        slotBeingHovered = null;  
     }
 }

@@ -4,21 +4,16 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 
-public class Slot : MonoBehaviour
+public class Slot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
-    public Draggable item = null;
+    Draggable item = null;
 
     public UnityEvent OnHover;
     public UnityEvent OnSlot;
 
-
-    private void Update()
+    private void Start()
     {
-        if(EventSystem.current.IsPointerOverGameObject())
-        {
-            OnHover.Invoke();
-            DragDropManager.instance.HoveringSlot(true, GetComponent<Slot>());
-        }
+        item = GetComponentInChildren<Draggable>();
     }
 
     public bool HasItem()
@@ -31,6 +26,7 @@ public class Slot : MonoBehaviour
         if (!HasItem())
         {
             item = _item;
+            OnSlot.Invoke();
             return true;
         }
         return false;
@@ -41,9 +37,14 @@ public class Slot : MonoBehaviour
         item = null;
     }
 
-    //bool ItemOver()
-    //{
-    //    out RaycastHit raycastHit;
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        OnHover.Invoke();
+        DragDropManager.instance.HoveringSlot(true, gameObject.GetComponent<Slot>());        
+    }
 
-    //}
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        DragDropManager.instance.HoveringSlot(false, gameObject.GetComponent<Slot>());
+    }
 }

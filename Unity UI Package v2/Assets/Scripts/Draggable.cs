@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
-using UnityEngine.UIElements;
+//using UnityEngine.UIElements;
+using UnityEngine.UI;
 
 public class Draggable : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHandler
 {
@@ -11,41 +12,34 @@ public class Draggable : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
     public UnityEvent OnDrop;
     public UnityEvent OnDragStart;
 
-    private bool dragging;
-
     // Start is called before the first frame update
     void Start()
     {
         OnDrag.AddListener(Drag);
     }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
     
     public void Drag()
     {
         gameObject.transform.position = Input.mousePosition;
-        dragging = true;
-        DragDropManager.instance.BeingDragged(gameObject.GetComponent<Draggable>());
+        Draggable temp = gameObject.GetComponent<Draggable>();
+        
+        DragDropManager.instance.BeingDragged(temp);
     }
-
     void IDragHandler.OnDrag(PointerEventData eventData)
     {
         OnDrag.Invoke();
+        
+    }
+
+    void IEndDragHandler.OnEndDrag(PointerEventData eventData)
+    {
+        OnDrop.Invoke();
+        GetComponent<Image>().raycastTarget = true;
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
         OnDragStart.Invoke();
-    }
-
-    public void OnEndDrag(PointerEventData eventData)
-    {
-        OnDrop.Invoke();
-        dragging = false;
+        GetComponent<Image>().raycastTarget = false;
     }
 }

@@ -33,25 +33,13 @@ public class Container : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         slots = new List<Slot>(GetComponentsInChildren<Slot>());
     }
 
-    private void Update()
-    {
-        //if (EventSystem.current.IsPointerOverGameObject())
-        //{
-        //    OnHover.Invoke();
-        //}
-        //else
-        //{
-        //    OffHover.Invoke();
-        //}
-    }
-
     public void ChangeColour(Container obj)
     {
-        Debug.Log(obj.gameObject.GetInstanceID());
-        if (obj.id == this.id)
-        {
-            obj.GetComponent<Image>().color = new Vector4(1, 1, 1, 1);
-        }
+        //Debug.Log(obj.gameObject.GetInstanceID());
+        //if (obj.id == this.id)
+        //{
+        //    obj.GetComponent<Image>().color = new Vector4(1, 1, 1, 1);
+        //}
     }
     public void ChangeColourBack()
     {
